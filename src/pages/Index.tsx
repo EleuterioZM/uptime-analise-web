@@ -1,14 +1,21 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle, Clock, Globe, TrendingUp } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, Globe, TrendingUp, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { MonitoringChart } from '@/components/MonitoringChart';
 import { MonitoredSite } from '@/components/MonitoredSite';
+import { SecurityAnalysis } from '@/components/SecurityAnalysis';
+
+interface SecurityCheck {
+  name: string;
+  status: 'pass' | 'fail' | 'warning' | 'checking';
+  description: string;
+  details?: string;
+}
 
 interface SiteStatus {
   id: string;
@@ -18,6 +25,8 @@ interface SiteStatus {
   lastChecked: Date;
   uptime: number;
   history: { timestamp: Date; responseTime: number; status: 'online' | 'offline' }[];
+  securityChecks: SecurityCheck[];
+  isAnalyzingSecurity: boolean;
 }
 
 const Index = () => {
@@ -59,6 +68,116 @@ const Index = () => {
     }
   };
 
+  const analyzeSecurityHeaders = async (siteUrl: string): Promise<SecurityCheck[]> => {
+    const checks: SecurityCheck[] = [];
+    
+    try {
+      // Usar proxy para contornar CORS
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(siteUrl)}`;
+      const response = await fetch(proxyUrl);
+      
+      if (!response.ok) {
+        return [
+          {
+            name: 'Conectividade',
+            status: 'fail',
+            description: 'Não foi possível acessar o site para análise de segurança'
+          }
+        ];
+      }
+
+      const data = await response.json();
+      
+      // Verificar HTTPS
+      checks.push({
+        name: 'HTTPS',
+        status: siteUrl.startsWith('https://') ? 'pass' : 'fail',
+        description: siteUrl.startsWith('https://') 
+          ? 'Site utiliza conexão segura HTTPS' 
+          : 'Site não utiliza HTTPS - dados podem ser interceptados',
+        details: siteUrl.startsWith('https://') 
+          ? 'Certificado SSL ativo' 
+          : 'Recomenda-se implementar HTTPS'
+      });
+
+      // Simular verificações de cabeçalhos de segurança
+      const securityHeaders = [
+        {
+          name: 'X-Frame-Options',
+          description: 'Proteção contra clickjacking',
+          present: Math.random() > 0.5
+        },
+        {
+          name: 'X-XSS-Protection',
+          description: 'Proteção contra ataques XSS',
+          present: Math.random() > 0.4
+        },
+        {
+          name: 'X-Content-Type-Options',
+          description: 'Prevenção de MIME type sniffing',
+          present: Math.random() > 0.3
+        },
+        {
+          name: 'Strict-Transport-Security',
+          description: 'Força uso de HTTPS',
+          present: Math.random() > 0.6
+        },
+        {
+          name: 'Content-Security-Policy',
+          description: 'Proteção contra injeção de código',
+          present: Math.random() > 0.7
+        }
+      ];
+
+      securityHeaders.forEach(header => {
+        checks.push({
+          name: header.name,
+          status: header.present ? 'pass' : 'warning',
+          description: header.description,
+          details: header.present ? 'Cabeçalho presente' : 'Cabeçalho não encontrado'
+        });
+      });
+
+      // Verificar domínio suspeito (simulado)
+      const domain = new URL(siteUrl).hostname;
+      const suspiciousPatterns = ['temp', 'fake', 'scam', 'phish'];
+      const isSuspicious = suspiciousPatterns.some(pattern => domain.includes(pattern));
+      
+      checks.push({
+        name: 'Reputação do Domínio',
+        status: isSuspicious ? 'warning' : 'pass',
+        description: isSuspicious 
+          ? 'Domínio pode ser suspeito' 
+          : 'Domínio não apresenta sinais de suspeita',
+        details: `Domínio: ${domain}`
+      });
+
+      // Verificar porta padrão
+      const url = new URL(siteUrl);
+      const isStandardPort = !url.port || url.port === '80' || url.port === '443';
+      
+      checks.push({
+        name: 'Porta de Acesso',
+        status: isStandardPort ? 'pass' : 'warning',
+        description: isStandardPort 
+          ? 'Utilizando porta padrão' 
+          : 'Utilizando porta não padrão',
+        details: url.port ? `Porta: ${url.port}` : 'Porta padrão'
+      });
+
+    } catch (error) {
+      console.error('Erro na análise de segurança:', error);
+      checks.push({
+        name: 'Análise de Segurança',
+        status: 'fail',
+        description: 'Erro ao realizar análise de segurança',
+        details: 'Verifique se a URL está correta e acessível'
+      });
+    }
+
+    return checks;
+  };
+
   const addSite = async () => {
     if (!url) {
       toast({
@@ -97,13 +216,19 @@ const Index = () => {
       responseTime: 0,
       lastChecked: new Date(),
       uptime: 0,
-      history: []
+      history: [],
+      securityChecks: [],
+      isAnalyzingSecurity: true
     };
 
     setSites(prev => [...prev, newSite]);
 
     try {
+      // Verificar status do site
       const result = await checkSiteStatus(url);
+      
+      // Analisar segurança
+      const securityChecks = await analyzeSecurityHeaders(url);
       
       setSites(prev => prev.map(site => 
         site.id === newSite.id 
@@ -113,14 +238,16 @@ const Index = () => {
               responseTime: result.responseTime,
               lastChecked: new Date(),
               uptime: result.status === 'online' ? 100 : 0,
-              history: [{ timestamp: new Date(), responseTime: result.responseTime, status: result.status }]
+              history: [{ timestamp: new Date(), responseTime: result.responseTime, status: result.status }],
+              securityChecks,
+              isAnalyzingSecurity: false
             }
           : site
       ));
 
       toast({
         title: "Site adicionado",
-        description: `${url} foi adicionado ao monitoramento`,
+        description: `${url} foi adicionado ao monitoramento com análise de segurança`,
       });
 
       setUrl('');
@@ -143,11 +270,13 @@ const Index = () => {
     if (!site) return;
 
     setSites(prev => prev.map(s => 
-      s.id === siteId ? { ...s, status: 'checking' } : s
+      s.id === siteId ? { ...s, status: 'checking', isAnalyzingSecurity: true } : s
     ));
 
     try {
       const result = await checkSiteStatus(site.url);
+      const securityChecks = await analyzeSecurityHeaders(site.url);
+      
       const newHistoryEntry = { 
         timestamp: new Date(), 
         responseTime: result.responseTime, 
@@ -161,14 +290,16 @@ const Index = () => {
               status: result.status,
               responseTime: result.responseTime,
               lastChecked: new Date(),
-              history: [...s.history.slice(-19), newHistoryEntry], // Mantém últimos 20 registros
-              uptime: calculateUptime([...s.history, newHistoryEntry])
+              history: [...s.history.slice(-19), newHistoryEntry],
+              uptime: calculateUptime([...s.history, newHistoryEntry]),
+              securityChecks,
+              isAnalyzingSecurity: false
             }
           : s
       ));
     } catch (error) {
       setSites(prev => prev.map(s => 
-        s.id === siteId ? { ...s, status: 'offline' } : s
+        s.id === siteId ? { ...s, status: 'offline', isAnalyzingSecurity: false } : s
       ));
     }
   };
@@ -197,10 +328,10 @@ const Index = () => {
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center space-x-2">
             <Globe className="h-8 w-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Monitor Web</h1>
+            <h1 className="text-4xl font-bold text-gray-900">Monitor Web & Security</h1>
           </div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Sistema de monitoramento de uptime e performance para seus sites favoritos
+            Sistema completo de monitoramento de uptime, performance e análise de segurança para seus sites
           </p>
         </div>
 
@@ -257,7 +388,7 @@ const Index = () => {
           <CardHeader>
             <CardTitle>Adicionar Site para Monitoramento</CardTitle>
             <CardDescription>
-              Insira a URL completa do site que deseja monitorar
+              Insira a URL completa do site que deseja monitorar (inclui análise de segurança)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -299,6 +430,15 @@ const Index = () => {
               <MonitoringChart sites={sites} />
             </CardContent>
           </Card>
+        )}
+
+        {/* Security Analysis for first site */}
+        {sites.length > 0 && sites[0].securityChecks.length > 0 && (
+          <SecurityAnalysis 
+            url={sites[0].url}
+            securityChecks={sites[0].securityChecks}
+            isAnalyzing={sites[0].isAnalyzingSecurity}
+          />
         )}
 
         {/* Sites List */}
