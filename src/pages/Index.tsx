@@ -33,7 +33,6 @@ const Index = () => {
   const [url, setUrl] = useState('');
   const [sites, setSites] = useState<SiteStatus[]>([]);
   const [isChecking, setIsChecking] = useState(false);
-  const [selectedSiteForSecurity, setSelectedSiteForSecurity] = useState<string | null>(null);
   const { toast } = useToast();
 
   const validateUrl = (url: string): boolean => {
@@ -325,16 +324,16 @@ const Index = () => {
     return Math.round((onlineCount / history.length) * 100);
   };
 
-  const handleViewSecurity = (siteId: string) => {
-    setSelectedSiteForSecurity(siteId);
+  const removeSite = (siteId: string) => {
+    setSites(prev => prev.filter(site => site.id !== siteId));
+    toast({
+      title: "Site removido",
+      description: "Site removido do monitoramento",
+    });
   };
 
   const onlineSites = sites.filter(site => site.status === 'online').length;
   const offlineSites = sites.filter(site => site.status === 'offline').length;
-
-  const selectedSite = selectedSiteForSecurity 
-    ? sites.find(site => site.id === selectedSiteForSecurity)
-    : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
@@ -447,12 +446,12 @@ const Index = () => {
           </Card>
         )}
 
-        {/* Security Analysis for selected site */}
-        {selectedSite && selectedSite.securityChecks.length > 0 && (
+        {/* Security Analysis for first site */}
+        {sites.length > 0 && sites[0].securityChecks.length > 0 && (
           <SecurityAnalysis 
-            url={selectedSite.url}
-            securityChecks={selectedSite.securityChecks}
-            isAnalyzing={selectedSite.isAnalyzingSecurity}
+            url={sites[0].url}
+            securityChecks={sites[0].securityChecks}
+            isAnalyzing={sites[0].isAnalyzingSecurity}
           />
         )}
 
@@ -474,7 +473,7 @@ const Index = () => {
                   key={site.id}
                   site={site}
                   onRecheck={() => recheckSite(site.id)}
-                  onViewSecurity={() => handleViewSecurity(site.id)}
+                  onRemove={() => removeSite(site.id)}
                 />
               ))}
             </div>
