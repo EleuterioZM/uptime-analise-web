@@ -1,8 +1,7 @@
-
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AlertCircle, CheckCircle, Clock, RefreshCw, Trash2, ExternalLink } from 'lucide-react';
+import { AlertCircle, CheckCircle, Clock, RefreshCw, Eye, ExternalLink } from 'lucide-react';
 
 interface SiteStatus {
   id: string;
@@ -17,10 +16,10 @@ interface SiteStatus {
 interface MonitoredSiteProps {
   site: SiteStatus;
   onRecheck: () => void;
-  onRemove: () => void;
+  onViewSecurity: () => void;
 }
 
-export const MonitoredSite = ({ site, onRecheck, onRemove }: MonitoredSiteProps) => {
+export const MonitoredSite = ({ site, onRecheck, onViewSecurity }: MonitoredSiteProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'online':
@@ -105,10 +104,10 @@ export const MonitoredSite = ({ site, onRecheck, onRemove }: MonitoredSiteProps)
             <Button
               variant="outline"
               size="sm"
-              onClick={onRemove}
-              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+              onClick={onViewSecurity}
+              className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
             >
-              <Trash2 className="h-4 w-4" />
+              <Eye className="h-4 w-4" />
             </Button>
           </div>
         </div>
