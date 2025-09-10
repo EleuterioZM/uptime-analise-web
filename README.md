@@ -2,7 +2,7 @@
 
 Um sistema de monitoramento de **desempenho** e **segurança básica** para websites, desenvolvido com foco em praticidade, automação e insights úteis para desenvolvedores e empresas.
 
-🔗 Acesse aqui: [https://performance-monitor-web.lovable.app](https://performance-monitor-web.lovable.app)
+🔗 Sistema de monitoramento de performance e segurança para websites
 
 ---
 
@@ -21,7 +21,7 @@ Um sistema de monitoramento de **desempenho** e **segurança básica** para webs
 
 ## 🛠️ Tecnologias Utilizadas
 
-- **Lovable** – Criação rápida e visual de interfaces web
+- **React + Vite** – Interface moderna e responsiva
 - **n8n** – Automação de fluxos de trabalho
 - **JavaScript / Node.js** – Scripts para testes e análises
 - **HTML/CSS** – Customização da interface
